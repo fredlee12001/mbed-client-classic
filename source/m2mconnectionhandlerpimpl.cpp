@@ -20,7 +20,6 @@
 #include "mbed-client/m2mconnectionhandler.h"
 
 #include "pal.h"
-#include "pal_rtos.h"
 #include "pal_errors.h"
 #include "pal_macros.h"
 #include "pal_network.h"
@@ -168,11 +167,6 @@ bool M2MConnectionHandlerPimpl::resolve_server_address(const String& server_addr
     event.priority = ARM_LIB_HIGH_PRIORITY_EVENT;
 
     return !eventOS_event_send(&event);
-}
-
-void connection_thread(const void *data)
-{
-    ((M2MConnectionHandlerPimpl*)data)->receive_handler();
 }
 
 void M2MConnectionHandlerPimpl::dns_handler()
