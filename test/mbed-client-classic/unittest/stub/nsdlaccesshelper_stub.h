@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2016 - 2017 ARM Limited. All rights reserved.
+ * Copyright (c) 2017 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  * Licensed under the Apache License, Version 2.0 (the License); you may
  * not use this file except in compliance with the License.
@@ -13,23 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef M2M_RESOURCE_STUB_H
-#define M2M_RESOURCE_STUB_H
+#ifndef NSDLACCESSHELPER_STUB_H
+#define NSDLACCESSHELPER_STUB_H
 
-#include "m2mresource.h"
+#include "nsdlaccesshelper.h"
 
 //some internal test related stuff
-namespace m2mresource_stub
+namespace nsdlaccesshelper_stub
 {
-    extern uint32_t int_value;
-    extern uint8_t* delayed_token;
-    extern uint8_t delayed_token_len;
     extern bool bool_value;
-    extern M2MResourceInstanceList list;
-    extern M2MResourceInstance *instance;
-    extern M2MObjectInstance *object_instance;
+    extern void *void_value;
+    extern uint8_t int_value;
     void clear();
-    extern sn_coap_hdr_s *header;
 }
-
-#endif // M2M_RESOURCE_STUB_H
+#endif // NSDLACCESSHELPER_STUB_H
