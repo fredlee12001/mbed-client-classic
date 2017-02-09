@@ -63,14 +63,25 @@ extern "C" void connection_event_handler(arm_event_s *event)
     }
 }
 
+// This callback is received from "some" socket event and we need to
+// act according to the socket state.
 void M2MConnectionHandlerPimpl::send_receive_event(void)
 {
     arm_event_s event;
     event.receiver = M2MConnectionHandlerPimpl::_tasklet_id;
     event.sender = 0;
-    event.event_type = ESocketReadytoRead;
     event.data_ptr = NULL;
     event.priority = ARM_LIB_HIGH_PRIORITY_EVENT;
+
+    // The dns_handler() is used for the socket connection phase and
+    // after socket is connected, all the callbacks are assumed to come
+    // from async socket data send/receival.
+    if (_socket_state == ESocketStateConnected) {
+        event.event_type = ESocketReadytoRead;
+    } else {
+        event.event_type = ESocketDnsHandler;
+    }
+
     eventOS_event_send(&event);
 }
 
@@ -100,7 +111,8 @@ M2MConnectionHandlerPimpl::M2MConnectionHandlerPimpl(M2MConnectionHandler* base,
  _server_port(0),
  _listen_port(0),
  _running(false),
- _net_iface(0)
+ _net_iface(0),
+_socket_state(ESocketStateDisconnected)
 {
 #ifndef PAL_NET_TCP_AND_TLS_SUPPORT
     if (is_tcp_connection()) {
@@ -149,15 +161,25 @@ bool M2MConnectionHandlerPimpl::resolve_server_address(const String& server_addr
                                                        M2MConnectionObserver::ServerType server_type,
                                                        const M2MSecurity* security)
 {
-    arm_event_s event;
-
     tr_debug("resolve_server_address()");
+
+    // restart the connection state machine
+    _socket_state = ESocketStateDisconnected;
 
     _security = security;
     _server_port = server_port;
     _server_type = server_type;
     _server_address = server_address;
 
+    return send_dns_event();
+}
+
+bool M2MConnectionHandlerPimpl::send_dns_event()
+{
+    tr_debug("send_dns_event()");
+
+    arm_event_s event;
+    
     event.receiver = M2MConnectionHandlerPimpl::_tasklet_id;
     event.sender = 0;
     event.event_type = ESocketDnsHandler;
@@ -170,6 +192,9 @@ bool M2MConnectionHandlerPimpl::resolve_server_address(const String& server_addr
 void M2MConnectionHandlerPimpl::dns_handler()
 {
     palStatus_t status;
+
+#if 0
+    // XXX: what is the point of this block here?
     uint32_t interface_count;
     status = pal_getNumberOfNetInterfaces(&interface_count);
     if(PAL_SUCCESS != status ) {
@@ -180,102 +205,169 @@ void M2MConnectionHandlerPimpl::dns_handler()
         _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
         return;
     }
+#endif
 
     palSocketLength_t _socket_address_len;
 
-    if(PAL_SUCCESS != pal_getAddressInfo(_server_address.c_str(), &_socket_address, &_socket_address_len)){
-        _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-        return;
-    }
-    pal_setSockAddrPort(&_socket_address, _server_port);
+    tr_debug("M2MConnectionHandlerPimpl::dns_handler - _socket_state = %d", _socket_state);
 
-    if(_network_stack == M2MInterface::LwIP_IPv4 ||
-       _network_stack == M2MInterface::ATWINC_IPv4){
-        if(PAL_SUCCESS != pal_getSockAddrIPV4Addr(&_socket_address,_ipV4Addr)){
-            _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-            return;
-        }
+    switch (_socket_state) {
+        case ESocketStateDisconnected:
 
-        tr_debug("IP Address %s",tr_array(_ipV4Addr, 4));
+            if(PAL_SUCCESS != pal_getAddressInfo(_server_address.c_str(), &_socket_address, &_socket_address_len)){
+                _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
+                return;
+            }
+            pal_setSockAddrPort(&_socket_address, _server_port);
 
-        _address._address = (void*)_ipV4Addr;
-        _address._length = PAL_IPV4_ADDRESS_SIZE;
-        _address._port = _server_port;
-        _address._stack = _network_stack;
-    }
-    else if(_network_stack == M2MInterface::LwIP_IPv6 ||
-            _network_stack == M2MInterface::Nanostack_IPv6){
-        if(PAL_SUCCESS != pal_getSockAddrIPV6Addr(&_socket_address,_ipV6Addr)){
-            _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-            return;
-        }
+            if(_network_stack == M2MInterface::LwIP_IPv4 ||
+               _network_stack == M2MInterface::ATWINC_IPv4){
+                if(PAL_SUCCESS != pal_getSockAddrIPV4Addr(&_socket_address,_ipV4Addr)){
+                    _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
+                    return;
+                }
 
-        tr_debug("IP Address %s",tr_array(_ipV6Addr,sizeof(_ipV6Addr)));
+                tr_debug("IP Address %s",tr_array(_ipV4Addr, 4));
 
-        _address._address = (void*)_ipV6Addr;
-        _address._length = PAL_IPV6_ADDRESS_SIZE;
-        _address._port = _server_port;
-        _address._stack = _network_stack;
-    }
-    else {
-        tr_error("socket config error, %d", (int)_network_stack);
-        _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-        return;
-    }
+                _address._address = (void*)_ipV4Addr;
+                _address._length = PAL_IPV4_ADDRESS_SIZE;
+                _address._port = _server_port;
+                _address._stack = _network_stack;
+            }
+            else if(_network_stack == M2MInterface::LwIP_IPv6 ||
+                    _network_stack == M2MInterface::Nanostack_IPv6){
+                if(PAL_SUCCESS != pal_getSockAddrIPV6Addr(&_socket_address,_ipV6Addr)){
+                    _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
+                    return;
+                }
 
-    close_socket();
-    if(!init_socket()) {
-        _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-        return;
-    }
+                tr_debug("IP Address %s",tr_array(_ipV6Addr,sizeof(_ipV6Addr)));
 
-    if(is_tcp_connection()) {
+                _address._address = (void*)_ipV6Addr;
+                _address._length = PAL_IPV6_ADDRESS_SIZE;
+                _address._port = _server_port;
+                _address._stack = _network_stack;
+            }
+            else {
+                tr_error("socket config error, %d", (int)_network_stack);
+                _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
+                return;
+            }
+
+            close_socket();
+            if(!init_socket()) {
+                _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
+                return;
+            }
+
+            if(is_tcp_connection()) {
 #ifdef PAL_NET_TCP_AND_TLS_SUPPORT
-       tr_debug("resolve_server_address - Using TCP");
-        if (pal_connect(_socket, &_socket_address, sizeof(_socket_address)) != PAL_SUCCESS) {
-            _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-            return;
-        }
+                tr_debug("resolve_server_address - Using TCP");
+                status = pal_connect(_socket, &_socket_address, sizeof(_socket_address));
+
+                if (status == PAL_ERR_SOCKET_IN_PROGRES) {
+                    // In this case the connect is done asynchronously, and the pal_socketMiniSelect()
+                    // will be used to detect the end of connect.
+                    // XXX: the mbed-os version of PAL has a bug (IOTPAL-228) open that the select
+                    // does not necessarily work correctly. So, should we actually handle 
+                    // the PAL_ERR_SOCKET_IN_PROGRESS as a error here if code is compiled for mbed-os?
+                    tr_debug("pal_connect(): %d, async connect started", status);
+                    // we need to wait for the event
+                    _socket_state = ESocketStateConnecting;
+                    break;
+
+                } else if (status == PAL_SUCCESS) {
+
+                    tr_info("pal_connect(): success");
+                    _running = true;
+                    _socket_state = ESocketStateConnected;
+
+                } else {
+                    tr_error("pal_connect(): failed: %d", status);
+                    _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
+                    return;
+                }
+#else
+                tr_error("dns_handler() - TCP not configured"
 #endif //PAL_NET_TCP_AND_TLS_SUPPORT
-    }
+            } else {
+                tr_debug("resolve_server_address - Using UDP");
+                _socket_state = ESocketStateConnected;
+                _running = true;
+            }
 
-    _running = true;
-
-    if (_security) {
-        if (_security->resource_value_int(M2MSecurity::SecurityMode) == M2MSecurity::Certificate ||
-            _security->resource_value_int(M2MSecurity::SecurityMode) == M2MSecurity::Psk) {
-            if( _security_impl != NULL ){
-                _security_impl->reset();
-                if (_security_impl->init(_security) == 0) {
-                    _is_handshaking = true;
-                    tr_debug("resolve_server_address - connect DTLS");
-                    if(_security_impl->start_connecting_non_blocking(_base) < 0 ){
-                        tr_debug("dns_handler - handshake failed");
-                        _is_handshaking = false;
-                        _observer.socket_error(M2MConnectionHandler::SSL_CONNECTION_ERROR);
+        // fall through is a normal flow in case the UDP was used or pal_connect() happened to return immediately with PAL_SUCCESS
+        case ESocketStateConnected:
+            if (_security) {
+                if (_security->resource_value_int(M2MSecurity::SecurityMode) == M2MSecurity::Certificate ||
+                    _security->resource_value_int(M2MSecurity::SecurityMode) == M2MSecurity::Psk) {
+                    if( _security_impl != NULL ){
+                        _security_impl->reset();
+                        if (_security_impl->init(_security) == 0) {
+                            _is_handshaking = true;
+                            tr_debug("resolve_server_address - connect DTLS");
+                            if(_security_impl->start_connecting_non_blocking(_base) < 0 ){
+                                tr_debug("dns_handler - handshake failed");
+                                _is_handshaking = false;
+                                _observer.socket_error(M2MConnectionHandler::SSL_CONNECTION_ERROR);
+                                close_socket();
+                                return;
+                            }
+                        } else {
+                            tr_error("resolve_server_address - init failed");
+                            _observer.socket_error(M2MConnectionHandler::SSL_CONNECTION_ERROR, false);
+                            close_socket();
+                            return;
+                        }
+                    } else {
+                        tr_error("dns_handler - sec is null");
+                        _observer.socket_error(M2MConnectionHandler::SSL_CONNECTION_ERROR, false);
                         close_socket();
                         return;
                     }
-                } else {
-                    tr_error("resolve_server_address - init failed");
-                    _observer.socket_error(M2MConnectionHandler::SSL_CONNECTION_ERROR, false);
-                    close_socket();
-                    return;
                 }
-            } else {
-                tr_error("dns_handler - sec is null");
-                _observer.socket_error(M2MConnectionHandler::SSL_CONNECTION_ERROR, false);
-                close_socket();
+            }
+            if(!_is_handshaking) {
+                enable_keepalive();
+                _observer.address_ready(_address,
+                                        _server_type,
+                                        _address._port);
+            }
+            break;
+
+        // This case is a continuation of a nonblocking connect() and is skipped
+        // completely on UDP.
+        case ESocketStateConnecting:
+
+            // there is only one socket which we are interested
+            uint8_t socketStatus[1];
+            pal_timeVal_t zeroTime = {0, 0};
+            uint32_t socketsSet = 0;
+            
+            status = pal_socketMiniSelect(&_socket, 1, &zeroTime, socketStatus, &socketsSet);
+            if (status != PAL_SUCCESS) {
+                // XXX: how could this fail? What to do?
+                tr_error("dns_handler() - read select fail, err: %d", status);
+                close_socket(); // this will also set the socket state to disconnect
                 return;
             }
-        }
+
+            if (socketsSet > 0) {
+                if (PAL_NET_SELECT_IS_TX(socketStatus, 0)) {
+                    // Socket is connected, signal the dns_handler() again to run rest of the steps
+                    tr_debug("dns_handler() - connect+select succeeded");
+                    _socket_state = ESocketStateConnected;
+                    send_dns_event();
+                } else if (PAL_NET_SELECT_IS_ERR(socketStatus, 0)) {
+                    tr_error("dns_handler() - connect+select failed");
+                    close_socket(); // this will also set the socket state to disconnect
+                } else {
+                    tr_debug("dns_handler() - connect+select not ready yet, continue waiting");
+                }
+            }
+            break;
     }
-    if(!_is_handshaking) {
-        enable_keepalive();
-        _observer.address_ready(_address,
-                                _server_type,
-                                _address._port);
-    }
+    
 }
 
 bool M2MConnectionHandlerPimpl::send_data(uint8_t *data,
@@ -347,6 +439,7 @@ void M2MConnectionHandlerPimpl::send_socket_data(uint8_t *data, uint16_t data_le
         if (ret == PAL_SUCCESS) {
             success = true;
         }
+        // TODO: the handling of EWOULDBLOCK would be nice
     }
 
     if (!success) {
@@ -422,7 +515,7 @@ int M2MConnectionHandlerPimpl::receive_from_socket(unsigned char *buf, size_t le
     if(status == PAL_SUCCESS){
         return recv_len;
     }
-    else if(status == PAL_ERR_SOCKET_WOULD_BLOCK || status == (-65536)){
+    else if (status == PAL_ERR_SOCKET_WOULD_BLOCK) {
         return M2MConnectionHandler::CONNECTION_ERROR_WANTS_READ;
     }
     else {
@@ -629,6 +722,9 @@ void M2MConnectionHandlerPimpl::close_socket()
        _running = false;
        pal_close(&_socket);
     }
+    // make sure the socket connection statemachine is reset too.
+    _socket_state = ESocketStateDisconnected;
+    
     tr_debug("close_socket() - OUT");
 }
 

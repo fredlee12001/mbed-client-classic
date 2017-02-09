@@ -219,7 +219,18 @@ private:
     */
     void enable_keepalive();
 
+    /**
+     * @brief Internal helper for sending a event that will wake up dns_handler().
+     */
+    static bool send_dns_event();
+
 private:
+    enum SocketState {
+        ESocketStateDisconnected,
+        ESocketStateConnecting,
+        ESocketStateConnected
+    };
+
     M2MConnectionHandler                        *_base;
     M2MConnectionObserver                       &_observer;
     M2MConnectionSecurity                       *_security_impl; //owned
@@ -245,6 +256,8 @@ private:
     palSocketAddress_t                          _socket_address;
     static int8_t                               _tasklet_id;
     String                                      _server_address;
+
+    SocketState                                 _socket_state;
 
 friend class Test_M2MConnectionHandlerPimpl;
 friend class Test_M2MConnectionHandlerPimpl_mbed;
