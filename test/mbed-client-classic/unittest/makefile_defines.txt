@@ -13,6 +13,8 @@ INCLUDE_DIRS =\
   ../../../../\
   ../../../../test_modules/\
   ../../../../test_modules/mbed-client-pal/Source/PAL-Impl/Services-API/\
+  ../../../../test_modules/mbed-client-pal/Source/Port/Platform-API\
+  ../../../../test_modules/mbed-client-pal/Source/Port/Reference-Impl/mbedOS/CFStore\
   ../../../../test_modules/mbed-client/mbed-client\
   ../../../../test_modules/mbed-client\
   ../../../../test_modules/mbed-client/source\
@@ -24,7 +26,9 @@ INCLUDE_DIRS =\
   ../../../../test_modules/nanostack-libservice/mbed-client-libservice\
   ../../../../test_modules/sal-stack-nanostack-eventloop/nanostack-event-loop/\
   ../../../../test_modules/mbed-trace\
-  ../../../../test_modules/mbed-os/features/FEATURE_COMMON_PAL/nanostack-hal-mbed-cmsis-rtos\
+  ../../../../test_modules/mbed-os/features/FEATURE_COMMON_PAL/nanostack-hal-mbed-cmsis-rtos/\
+  ../../../../test_modules/mbed-os/features/storage/FEATURE_STORAGE/cfstore/configuration-store/\
+  ../../../../test_modules/mbed-os/hal/storage_abstraction\
   /usr/include\
   $(CPPUTEST_HOME)/include\
 
