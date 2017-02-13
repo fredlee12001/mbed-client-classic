@@ -13,24 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef M2M_RESOURCE_STUB_H
-#define M2M_RESOURCE_STUB_H
 
-#include "m2mresource.h"
+#include "m2mstringbufferbase_stub.h"
 
-//some internal test related stuff
-namespace m2mresource_stub
+bool StringBufferBase::ensure_space(size_t max_size, size_t required_size) const
 {
-    extern uint32_t int_value;
-    extern uint8_t* delayed_token;
-    extern uint8_t delayed_token_len;
-    extern bool bool_value;
-    extern M2MResourceInstanceList list;
-    extern M2MResourceInstance *instance;
-    extern M2MObjectInstance *object_instance;
-    void clear();
-    extern sn_coap_hdr_s *header;
+
 }
 
-#endif // M2M_RESOURCE_STUB_H
+bool StringBufferBase::append(char *buff, size_t max_size, char data)
+{
 
+}
+
+bool StringBufferBase::append(char *buff, size_t max_size, const char *data)
+{
+
+}
+
+bool StringBufferBase::append(char *buff, size_t max_size, const char *data, size_t data_len)
+{
+
+}
+
+bool StringBufferBase::append_int(char *buff, size_t max_size, uint16_t data)
+{
+
+}
+
+int StringBufferBase::find_last_of(const char *buff, char search_char) const
+{
+
+}

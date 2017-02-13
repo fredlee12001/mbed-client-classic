@@ -13,24 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef M2M_RESOURCE_STUB_H
-#define M2M_RESOURCE_STUB_H
 
-#include "m2mresource.h"
+#ifndef M2MSTRINGBUFFERBASE_STUB_H
+#define M2MSTRINGBUFFERBASE_STUB_H
 
-//some internal test related stuff
-namespace m2mresource_stub
-{
-    extern uint32_t int_value;
-    extern uint8_t* delayed_token;
-    extern uint8_t delayed_token_len;
-    extern bool bool_value;
-    extern M2MResourceInstanceList list;
-    extern M2MResourceInstance *instance;
-    extern M2MObjectInstance *object_instance;
-    void clear();
-    extern sn_coap_hdr_s *header;
-}
+#include "m2mstringbufferbase.h"
 
-#endif // M2M_RESOURCE_STUB_H
-
+#endif // M2MSTRINGBUFFERBASE_STUB_H
