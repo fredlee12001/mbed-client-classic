@@ -121,6 +121,10 @@ M2MConnectionHandlerPimpl::M2MConnectionHandlerPimpl(M2MConnectionHandler* base,
 
     memset(&_address, 0, sizeof _address);
     memset(&_socket_address, 0, sizeof _socket_address);
+    memset(&_ipV4Addr, 0, sizeof(palIpV4Addr_t));
+    memset(&_ipV6Addr, 0, sizeof(palIpV6Addr_t));
+    memset(&_recv_buffer, 0, BUFFER_LENGTH);
+
     connection_handler = this;
     eventOS_scheduler_mutex_wait();
     if (M2MConnectionHandlerPimpl::_tasklet_id == -1) {

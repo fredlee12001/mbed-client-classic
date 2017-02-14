@@ -33,3 +33,4 @@ namespace m2mresource_stub
 }
 
 #endif // M2M_RESOURCE_STUB_H
+

@@ -20,3 +20,4 @@
 #include "m2mstringbufferbase.h"
 
 #endif // M2MSTRINGBUFFERBASE_STUB_H
+

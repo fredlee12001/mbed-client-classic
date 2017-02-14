@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2017 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
@@ -27,4 +26,6 @@ namespace nsdlaccesshelper_stub
     extern uint8_t int_value;
     void clear();
 }
+
 #endif // NSDLACCESSHELPER_STUB_H
+

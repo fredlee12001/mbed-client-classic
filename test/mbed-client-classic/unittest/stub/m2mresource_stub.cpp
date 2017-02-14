@@ -187,5 +187,5 @@ M2MObjectInstance& M2MResource::get_parent_object_instance() const
 
 const char* M2MResource::object_name() const
 {
-
 }
+

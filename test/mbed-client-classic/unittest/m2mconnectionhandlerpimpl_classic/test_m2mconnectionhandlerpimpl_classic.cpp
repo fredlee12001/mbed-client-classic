@@ -24,6 +24,8 @@
 #include "eventOS_stub.h"
 #include "pal_network_stub.h"
 #include "eventOS_event.h"
+#include "nsdlaccesshelper_stub.h"
+#include "m2mstringbufferbase_stub.h"
 #include <limits.h>
 
 class M2MConnection_TestObserver : public M2MConnectionObserver {
@@ -343,7 +345,7 @@ void Test_M2MConnectionHandlerPimpl_classic::test_start_listening_for_data()
 
 void Test_M2MConnectionHandlerPimpl_classic::test_receive_handler()
 {
-    
+
     uint8_t data[5] = {0,0,0,1,123};
     pal_network_stub::size = 5;
 
@@ -531,7 +533,7 @@ extern "C" void connection_event_handler(arm_event_s *event);
 void Test_M2MConnectionHandlerPimpl_classic::test_connection_event_handler()
 {
     arm_event_s event;
-  
+
     event.data_ptr = malloc(1);
     event.event_data = 1;
 
