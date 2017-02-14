@@ -5,7 +5,7 @@ SRC_FILES = \
         ../../../../source/m2mconnectionhandlerpimpl.cpp \
 
 TEST_SRC_FILES = \
-	main.cpp \
+        main.cpp \
         m2mconnectionhandlerpimpl_classic_test.cpp \
         test_m2mconnectionhandlerpimpl_classic.cpp \
        ../stub/m2msecurity_stub.cpp \
@@ -18,6 +18,8 @@ TEST_SRC_FILES = \
        ../stub/m2mconnectionsecurity_stub.cpp \
        ../stub/pal_network_stub.cpp \
        ../stub/eventOS_stub.cpp \
+       ../stub/m2mstringbufferbase_stub.cpp \
+       ../stub/nsdlaccesshelper_stub.cpp \
        ../stub/pal_stub.cpp \
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 ARM Limited. All rights reserved.
+ * Copyright (c) 2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  * Licensed under the Apache License, Version 2.0 (the License); you may
  * not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ namespace m2msecurity_stub
 {
     extern bool has_value;
     extern uint32_t int_value;
+    extern uint32_t sec_mode;
     extern bool bool_value;
     extern String *string_value;
     extern M2MResource* resource;
