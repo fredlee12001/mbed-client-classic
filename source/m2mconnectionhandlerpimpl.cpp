@@ -59,6 +59,7 @@ extern "C" void connection_event_handler(arm_event_s *event)
             break;
 
         default:
+            tr_info("connection_event_handler: default type: %d", (int)event->event_type);
             break;
     }
 }
@@ -78,6 +79,10 @@ void M2MConnectionHandlerPimpl::send_receive_event(void)
     // from async socket data send/receival.
     if (_socket_state == ESocketStateConnected) {
         event.event_type = ESocketReadytoRead;
+    } else if (_socket_state == ESocketStateConnectBeingCalled) {
+        // The pal_connect() may issue callback even during it is called, which we ignore completely.
+        tr_debug("send_receive_event : _socket_state: ESocketStateConnectBeingCalled, ignoring event");
+        return;
     } else {
         event.event_type = ESocketDnsHandler;
     }
@@ -214,6 +219,9 @@ void M2MConnectionHandlerPimpl::dns_handler()
     switch (_socket_state) {
         case ESocketStateDisconnected:
 
+            // initialize the socket to stable state
+            close_socket();
+
             if(PAL_SUCCESS != pal_getAddressInfo(_server_address.c_str(), &_socket_address, &_socket_address_len)){
                 _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
                 return;
@@ -254,7 +262,6 @@ void M2MConnectionHandlerPimpl::dns_handler()
                 return;
             }
 
-            close_socket();
             if(!init_socket()) {
                 _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
                 return;
@@ -263,6 +270,11 @@ void M2MConnectionHandlerPimpl::dns_handler()
             if(is_tcp_connection()) {
 #ifdef PAL_NET_TCP_AND_TLS_SUPPORT
                 tr_debug("resolve_server_address - Using TCP");
+
+                // At least on mbed-os the pal_connect() will perform callbacks even during it
+                // is called, which we will ignore when this state is set.
+                _socket_state = ESocketStateConnectBeingCalled;
+
                 status = pal_connect(_socket, &_socket_address, sizeof(_socket_address));
 
                 if (status == PAL_ERR_SOCKET_IN_PROGRES) {
@@ -284,6 +296,7 @@ void M2MConnectionHandlerPimpl::dns_handler()
 
                 } else {
                     tr_error("pal_connect(): failed: %d", status);
+                    close_socket();
                     _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
                     return;
                 }
@@ -343,12 +356,13 @@ void M2MConnectionHandlerPimpl::dns_handler()
             uint8_t socketStatus[1];
             pal_timeVal_t zeroTime = {0, 0};
             uint32_t socketsSet = 0;
-            
+
             status = pal_socketMiniSelect(&_socket, 1, &zeroTime, socketStatus, &socketsSet);
             if (status != PAL_SUCCESS) {
                 // XXX: how could this fail? What to do?
                 tr_error("dns_handler() - read select fail, err: %d", status);
                 close_socket(); // this will also set the socket state to disconnect
+                // XXX: should we inform the observer here too?
                 return;
             }
 
@@ -361,6 +375,7 @@ void M2MConnectionHandlerPimpl::dns_handler()
                 } else if (PAL_NET_SELECT_IS_ERR(socketStatus, 0)) {
                     tr_error("dns_handler() - connect+select failed");
                     close_socket(); // this will also set the socket state to disconnect
+                    // XXX: should we inform the observer here too?
                 } else {
                     tr_debug("dns_handler() - connect+select not ready yet, continue waiting");
                 }
@@ -474,6 +489,7 @@ int M2MConnectionHandlerPimpl::send_to_socket(const unsigned char *buf, size_t l
     palStatus_t status = PAL_ERR_GENERIC_FAILURE;
 
     if(!_running) {
+        tr_warn("send_to_socket NOT RUNNING");
         return (-1);
     }
 
