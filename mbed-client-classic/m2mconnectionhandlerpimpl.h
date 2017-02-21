@@ -226,8 +226,16 @@ private:
 
 private:
     enum SocketState {
+        /** Socket has not been intialized/connected yet. */
         ESocketStateDisconnected,
+
+        /** pal_connect() is in progress. */
+        ESocketStateConnectBeingCalled,
+
+        /** pal_connect() has been called and we are waiting for asynchronous response. */
         ESocketStateConnecting,
+
+        /** pal_connect is complete and the DTLS handshake is to be done. */
         ESocketStateConnected
     };
 
@@ -257,7 +265,10 @@ private:
     static int8_t                               _tasklet_id;
     String                                      _server_address;
 
-    SocketState                                 _socket_state;
+    // A state variable for the socket itself, which is needed to handle the
+    // asynchronous events and callbacks. Note: the state may be accessed from
+    // event sender and receiver threads.
+    volatile SocketState                        _socket_state;
 
 friend class Test_M2MConnectionHandlerPimpl;
 friend class Test_M2MConnectionHandlerPimpl_mbed;

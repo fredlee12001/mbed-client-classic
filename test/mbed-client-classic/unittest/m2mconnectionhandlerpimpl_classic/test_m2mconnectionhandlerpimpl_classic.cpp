@@ -193,14 +193,6 @@ void Test_M2MConnectionHandlerPimpl_classic::test_dns_handler()
     CHECK(observer->addressReady == false);
     CHECK(observer->error);
 
-    pal_network_stub::uint32_value = 0;
-
-    observer->error = false;
-    udp4_unsec->resolve_server_address("1", 12345, M2MConnectionObserver::LWM2MServer, NULL);
-    udp4_unsec->dns_handler();
-    CHECK(observer->addressReady == false);
-    CHECK(observer->error);
-
     pal_network_stub::uint32_value = 1;
 
     udp4_unsec->_network_stack = (M2MInterface::NetworkStack)123;
