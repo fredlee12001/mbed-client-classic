@@ -197,21 +197,6 @@ bool M2MConnectionHandlerPimpl::send_dns_event()
 void M2MConnectionHandlerPimpl::dns_handler()
 {
     palStatus_t status;
-
-#if 0
-    // XXX: what is the point of this block here?
-    uint32_t interface_count;
-    status = pal_getNumberOfNetInterfaces(&interface_count);
-    if(PAL_SUCCESS != status ) {
-        _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-        return;
-    }
-    if(interface_count <= 0) {
-        _observer.socket_error(M2MConnectionHandler::SOCKET_ABORT);
-        return;
-    }
-#endif
-
     palSocketLength_t _socket_address_len;
 
     tr_debug("M2MConnectionHandlerPimpl::dns_handler - _socket_state = %d", _socket_state);
