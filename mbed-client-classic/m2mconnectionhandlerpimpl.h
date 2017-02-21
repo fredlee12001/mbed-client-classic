@@ -219,7 +219,26 @@ private:
     */
     void enable_keepalive();
 
+    /**
+     * @brief Internal helper for sending a event that will wake up dns_handler().
+     */
+    static bool send_dns_event();
+
 private:
+    enum SocketState {
+        /** Socket has not been intialized/connected yet. */
+        ESocketStateDisconnected,
+
+        /** pal_connect() is in progress. */
+        ESocketStateConnectBeingCalled,
+
+        /** pal_connect() has been called and we are waiting for asynchronous response. */
+        ESocketStateConnecting,
+
+        /** pal_connect is complete and the DTLS handshake is to be done. */
+        ESocketStateConnected
+    };
+
     M2MConnectionHandler                        *_base;
     M2MConnectionObserver                       &_observer;
     M2MConnectionSecurity                       *_security_impl; //owned
@@ -245,6 +264,11 @@ private:
     palSocketAddress_t                          _socket_address;
     static int8_t                               _tasklet_id;
     String                                      _server_address;
+
+    // A state variable for the socket itself, which is needed to handle the
+    // asynchronous events and callbacks. Note: the state may be accessed from
+    // event sender and receiver threads.
+    volatile SocketState                        _socket_state;
 
 friend class Test_M2MConnectionHandlerPimpl;
 friend class Test_M2MConnectionHandlerPimpl_mbed;
